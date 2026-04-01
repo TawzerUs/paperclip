@@ -10,6 +10,7 @@ import { hermesLocalUIAdapter } from "./hermes-local";
 import { processUIAdapter } from "./process";
 import { httpUIAdapter } from "./http";
 import { loadDynamicParser } from "./dynamic-loader";
+import { SchemaConfigFields, buildSchemaAdapterConfig } from "./schema-config-fields";
 
 const uiAdapters: UIAdapterModule[] = [];
 const adaptersByType = new Map<string, UIAdapterModule>();
@@ -60,7 +61,6 @@ export function getUIAdapter(type: string): UIAdapterModule {
   const builtIn = adaptersByType.get(type);
 
   if (!builtIn) {
-    // No built-in adapter — fall through to the external-only path.
     let loadStarted = false;
     return {
       type,
@@ -74,16 +74,16 @@ export function getUIAdapter(type: string): UIAdapterModule {
                 type,
                 label: type,
                 parseStdoutLine: parser,
-                ConfigFields: processUIAdapter.ConfigFields,
-                buildAdapterConfig: processUIAdapter.buildAdapterConfig,
+                ConfigFields: SchemaConfigFields,
+                buildAdapterConfig: buildSchemaAdapterConfig,
               });
             }
           });
         }
         return processUIAdapter.parseStdoutLine(line, ts);
       },
-      ConfigFields: processUIAdapter.ConfigFields,
-      buildAdapterConfig: processUIAdapter.buildAdapterConfig,
+      ConfigFields: SchemaConfigFields,
+      buildAdapterConfig: buildSchemaAdapterConfig,
     };
   }
 
@@ -117,16 +117,16 @@ export function syncExternalAdapters(
                 type,
                 label,
                 parseStdoutLine: parser,
-                ConfigFields: processUIAdapter.ConfigFields,
-                buildAdapterConfig: processUIAdapter.buildAdapterConfig,
+                ConfigFields: SchemaConfigFields,
+                buildAdapterConfig: buildSchemaAdapterConfig,
               });
             }
           });
         }
         return processUIAdapter.parseStdoutLine(line, ts);
       },
-      ConfigFields: processUIAdapter.ConfigFields,
-      buildAdapterConfig: processUIAdapter.buildAdapterConfig,
+      ConfigFields: SchemaConfigFields,
+      buildAdapterConfig: buildSchemaAdapterConfig,
     });
   }
 }

@@ -35,7 +35,7 @@ import {
   setAdapterDisabled,
 } from "../services/adapter-plugin-store.js";
 import type { AdapterPluginRecord } from "../services/adapter-plugin-store.js";
-import type { ServerAdapterModule } from "../adapters/types.js";
+import type { ServerAdapterModule, AdapterConfigSchema } from "../adapters/types.js";
 import { loadExternalAdapterPackage, getUiParserSource, getOrExtractUiParserSource, reloadExternalAdapter } from "../adapters/plugin-loader.js";
 import { logger } from "../middleware/logger.js";
 import { assertBoard } from "./authz.js";
@@ -453,6 +453,7 @@ export function adapterRoutes() {
       // Swap in the reloaded module
       unregisterServerAdapter(type);
       registerWithSessionManagement(newModule);
+      configSchemaCache.delete(type);
 
       // Sync store.version from package.json (store may be missing version for local installs).
       const record = getAdapterPluginByType(type);
@@ -520,6 +521,7 @@ export function adapterRoutes() {
 
       unregisterServerAdapter(type);
       registerWithSessionManagement(newModule);
+      configSchemaCache.delete(type);
 
       // Sync store version from disk
       let newVersion: string | undefined;
@@ -538,6 +540,44 @@ export function adapterRoutes() {
       const message = err instanceof Error ? err.message : String(err);
       logger.error({ err, type }, "Failed to reinstall adapter");
       res.status(500).json({ error: `Reinstall failed: ${message}` });
+    }
+  });
+
+  // ── GET /api/adapters/:type/config-schema ────────────────────────────────
+  // Serve a declarative config schema for an adapter's UI form fields.
+  // The adapter's getConfigSchema() resolves all options (static and dynamic)
+  // so the UI receives a fully hydrated schema in a single fetch.
+  const configSchemaCache = new Map<string, { schema: AdapterConfigSchema; fetchedAt: number }>();
+  const CONFIG_SCHEMA_TTL_MS = 30_000;
+
+  router.get("/adapters/:type/config-schema", async (req, res) => {
+    assertBoard(req);
+    const { type } = req.params;
+
+    const adapter = findServerAdapter(type);
+    if (!adapter) {
+      res.status(404).json({ error: `Adapter "${type}" is not registered.` });
+      return;
+    }
+    if (!adapter.getConfigSchema) {
+      res.status(404).json({ error: `Adapter "${type}" does not provide a config schema.` });
+      return;
+    }
+
+    const cached = configSchemaCache.get(type);
+    if (cached && Date.now() - cached.fetchedAt < CONFIG_SCHEMA_TTL_MS) {
+      res.json(cached.schema);
+      return;
+    }
+
+    try {
+      const schema = await adapter.getConfigSchema();
+      configSchemaCache.set(type, { schema, fetchedAt: Date.now() });
+      res.json(schema);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error({ err, type }, "Failed to resolve config schema");
+      res.status(500).json({ error: `Failed to resolve config schema: ${message}` });
     }
   });
 

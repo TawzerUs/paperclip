@@ -31,6 +31,7 @@ import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/utils";
 import { ChoosePathButton } from "@/components/PathInstructionsModal";
 import { invalidateDynamicParser } from "@/adapters/dynamic-loader";
+import { invalidateConfigSchemaCache } from "@/adapters/schema-config-fields";
 
 function AdapterRow({
   adapter,
@@ -215,6 +216,7 @@ export function AdapterManager() {
     onSuccess: (result) => {
       invalidate();
       invalidateDynamicParser(result.type);
+      invalidateConfigSchemaCache(result.type);
       pushToast({
         title: "Adapter reloaded",
         body: `Type "${result.type}" reloaded.${result.version ? ` (v${result.version})` : ""}`,
@@ -231,6 +233,7 @@ export function AdapterManager() {
     onSuccess: (result) => {
       invalidate();
       invalidateDynamicParser(result.type);
+      invalidateConfigSchemaCache(result.type);
       pushToast({
         title: "Adapter reinstalled",
         body: `Type "${result.type}" updated from npm.${result.version ? ` (v${result.version})` : ""}`,

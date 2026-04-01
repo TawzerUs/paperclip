@@ -261,6 +261,30 @@ export interface ProviderQuotaResult {
   windows: QuotaWindow[];
 }
 
+// ---------------------------------------------------------------------------
+// Adapter config schema — declarative UI config for external adapters
+// ---------------------------------------------------------------------------
+
+export interface ConfigFieldOption {
+  label: string;
+  value: string;
+}
+
+export interface ConfigFieldSchema {
+  key: string;
+  label: string;
+  type: "text" | "select" | "toggle" | "number" | "textarea";
+  options?: ConfigFieldOption[];
+  default?: unknown;
+  hint?: string;
+  required?: boolean;
+  group?: string;
+}
+
+export interface AdapterConfigSchema {
+  fields: ConfigFieldSchema[];
+}
+
 export interface ServerAdapterModule {
   type: string;
   execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult>;
@@ -293,6 +317,13 @@ export interface ServerAdapterModule {
    * the adapter does not support detection or no config is found.
    */
   detectModel?: () => Promise<{ model: string; provider: string; source: string; candidates?: string[] } | null>;
+  /**
+   * Optional: return a declarative config schema so the UI can render
+   * adapter-specific form fields without shipping React components.
+   * Dynamic options (e.g. scanning a profiles directory) should be
+   * resolved inside this method — the caller receives a fully hydrated schema.
+   */
+  getConfigSchema?: () => Promise<AdapterConfigSchema> | AdapterConfigSchema;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,4 +384,6 @@ export interface CreateConfigValues {
   maxTurnsPerRun: number;
   heartbeatEnabled: boolean;
   intervalSec: number;
+  /** Arbitrary key-value pairs populated by schema-driven config fields. */
+  adapterSchemaValues?: Record<string, unknown>;
 }
