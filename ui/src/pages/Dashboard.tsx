@@ -298,7 +298,7 @@ export function Dashboard() {
 
   const issueGroups = useMemo(() => {
     if (dashGroupBy !== "grouped" || recentIssues.length === 0) return [];
-    return buildIssueGroups(recentIssues, agentMap);
+    return buildIssueGroups(recentIssues.slice(0, 10), agentMap);
   }, [dashGroupBy, recentIssues, agentMap]);
 
   // Initialize openGroups from localStorage when groups become available
